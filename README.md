@@ -11,9 +11,9 @@ mvn spring-boot:run       # или запустить HibernateApplication из 
 
 Таблицу и тестовые данные создают миграции Flyway (`src/main/resources/db/migration`).
 
-## API (ветка `jpa-repository`)
+## API (ветка `jpa-repository-jpql-query`)
 
-Репозиторий — интерфейс `PersonRepository extends JpaRepository<Person, PersonId>`: CRUD-методы наследуются, остальные — **методы-запросы** (Spring Data строит запрос по имени метода).
+Репозиторий — интерфейс `PersonRepository extends JpaRepository<Person, PersonId>`: CRUD-методы наследуются, поисковые методы работают через **`@Query` с запросами на JPQL**.
 
 | Запрос | Метод репозитория |
 |---|---|
@@ -22,9 +22,9 @@ mvn spring-boot:run       # или запустить HibernateApplication из 
 | `POST /persons` (тело — Person) | `save()`; 409, если ключ занят |
 | `PUT /persons` (тело — Person) | `save()`; 404, если человека нет |
 | `DELETE /persons?name=Ivan&surname=Petrov&age=35` | `deleteById(PersonId)` |
-| `GET /persons/by-city?city=Moscow` | `findByCityOfLivingIgnoreCase(city)` |
-| `GET /persons/by-age?age=30` | `findByIdAgeLessThanOrderByIdAgeAsc(age)` — младше `age`, по возрастанию |
-| `GET /persons/by-name-surname?name=Ivan&surname=Petrov` | `findFirstByIdNameAndIdSurnameOrderByIdAgeAsc(name, surname)` → `Optional`; 404, если нет |
+| `GET /persons/by-city?city=Moscow` | `findByCity(city)`: `SELECT p FROM Person p WHERE LOWER(p.cityOfLiving) = LOWER(:city)` |
+| `GET /persons/by-age?age=30` | `findYoungerThan(age)`: `... WHERE p.id.age < :age ORDER BY p.id.age ASC` |
+| `GET /persons/by-name-surname?name=Ivan&surname=Petrov` | `findByNameAndSurname(name, surname)` → `Optional`: первый результат JPQL-запроса `... WHERE p.id.name = :name AND p.id.surname = :surname ORDER BY p.id.age`; 404, если нет |
 
 Ключ таблицы — `name + surname + age`, поэтому людей с одинаковыми именем и фамилией может быть несколько (в тестовых данных — два Ivan Petrov). Метод по имени и фамилии возвращает `Optional` с первым из них (самым младшим).
 
@@ -42,7 +42,7 @@ mvn spring-boot:run       # или запустить HibernateApplication из 
 ## Устройство
 
 - `entity/Person`, `entity/PersonId`: Entity таблицы `persons`. Составной первичный ключ `name + surname + age` задан через `@EmbeddedId`.
-- `repository/PersonRepository`: Spring Data JPA репозиторий, методы перечислены в таблице выше.
+- `repository/PersonRepository`: Spring Data JPA репозиторий с запросами JPQL в `@Query`.
 - `controller/PersonController`: CRUD и поиск.
 - `db/migration`: миграции Flyway, `V1` создаёт таблицу, `V2` добавляет тестовые данные.
 - `docker-compose.yml`: PostgreSQL.

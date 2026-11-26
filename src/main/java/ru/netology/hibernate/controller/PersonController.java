@@ -79,24 +79,24 @@ public class PersonController {
         return ResponseEntity.noContent().build();
     }
 
-    // ---------- методы-запросы ----------
+    // ---------- запросы @Query (JPQL) ----------
 
     /** GET /persons/by-city?city=Moscow */
     @GetMapping("/by-city")
     public List<Person> getPersonsByCity(@RequestParam("city") String city) {
-        return personRepository.findByCityOfLivingIgnoreCase(city);
+        return personRepository.findByCity(city);
     }
 
     /** GET /persons/by-age?age=30 — младше 30, по возрастанию возраста. */
     @GetMapping("/by-age")
     public List<Person> getPersonsYoungerThan(@RequestParam("age") int age) {
-        return personRepository.findByIdAgeLessThanOrderByIdAgeAsc(age);
+        return personRepository.findYoungerThan(age);
     }
 
     /** GET /persons/by-name-surname?name=Ivan&surname=Petrov — 404, если не найден. */
     @GetMapping("/by-name-surname")
     public ResponseEntity<Person> getPersonByNameAndSurname(@RequestParam("name") String name,
                                                             @RequestParam("surname") String surname) {
-        return ResponseEntity.of(personRepository.findFirstByIdNameAndIdSurnameOrderByIdAgeAsc(name, surname));
+        return ResponseEntity.of(personRepository.findByNameAndSurname(name, surname));
     }
 }
