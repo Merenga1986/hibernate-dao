@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: netology-postgres-hibernate
+    environment:
+      POSTGRES_DB: netology
+      POSTGRES_USER: netology
+      POSTGRES_PASSWORD: netology
+    ports:
+      - "5432:5432"
