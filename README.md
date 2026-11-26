@@ -11,27 +11,41 @@ mvn spring-boot:run       # или запустить HibernateApplication из 
 
 Таблицу и тестовые данные создают миграции Flyway (`src/main/resources/db/migration`).
 
-## Запрос
+## API (ветка `jpa-repository`)
 
-```
-GET http://localhost:8080/persons/by-city?city=Moscow
-```
+Репозиторий — интерфейс `PersonRepository extends JpaRepository<Person, PersonId>`: CRUD-методы наследуются, остальные — **методы-запросы** (Spring Data строит запрос по имени метода).
+
+| Запрос | Метод репозитория |
+|---|---|
+| `GET /persons` | `findAll()` |
+| `GET /persons/one?name=Ivan&surname=Petrov&age=35` | `findById(PersonId)` |
+| `POST /persons` (тело — Person) | `save()`; 409, если ключ занят |
+| `PUT /persons` (тело — Person) | `save()`; 404, если человека нет |
+| `DELETE /persons?name=Ivan&surname=Petrov&age=35` | `deleteById(PersonId)` |
+| `GET /persons/by-city?city=Moscow` | `findByCityOfLivingIgnoreCase(city)` |
+| `GET /persons/by-age?age=30` | `findByIdAgeLessThanOrderByIdAgeAsc(age)` — младше `age`, по возрастанию |
+| `GET /persons/by-name-surname?name=Ivan&surname=Petrov` | `findFirstByIdNameAndIdSurnameOrderByIdAgeAsc(name, surname)` → `Optional`; 404, если нет |
+
+Ключ таблицы — `name + surname + age`, поэтому людей с одинаковыми именем и фамилией может быть несколько (в тестовых данных — два Ivan Petrov). Метод по имени и фамилии возвращает `Optional` с первым из них (самым младшим).
+
+Пример тела для `POST`/`PUT`:
 
 ```json
-[
-  {"id": {"name": "Ivan", "surname": "Petrov", "age": 35}, "phoneNumber": "+79161234567", "cityOfLiving": "Moscow"},
-  {"id": {"name": "Anna", "surname": "Ivanova", "age": 25}, "phoneNumber": "+79162345678", "cityOfLiving": "Moscow"},
-  {"id": {"name": "Pavel", "surname": "Kuznetsov", "age": 19}, "phoneNumber": "+79055678901", "cityOfLiving": "Moscow"}
-]
+{"id": {"name": "Petr", "surname": "Volkov", "age": 40}, "phoneNumber": "+79990001122", "cityOfLiving": "Moscow"}
 ```
 
-Город сравнивается без учёта регистра.
+Примеры ответов на тестовых данных:
+- `/persons/by-city?city=Moscow` → Ivan Petrov 35, Anna Ivanova 25, Pavel Kuznetsov 19
+- `/persons/by-age?age=30` → Pavel 19, Ivan 20, Anna 25, Maria 28
+- `/persons/by-name-surname?name=Ivan&surname=Petrov` → Ivan Petrov 20 (Kazan)
 
 ## Устройство
 
 - `entity/Person`, `entity/PersonId`: Entity таблицы `persons`. Составной первичный ключ `name + surname + age` задан через `@EmbeddedId`.
-- `repository/PersonRepository`: `@Repository`. `EntityManager` внедряется через `@PersistenceContext`, `getPersonsByCity(String city)` выполняет JPQL-запрос.
-- `controller/PersonController`: `GET /persons/by-city?city=...`.
+- `repository/PersonRepository`: Spring Data JPA репозиторий, методы перечислены в таблице выше.
+- `controller/PersonController`: CRUD и поиск.
+- `db/migration`: миграции Flyway, `V1` создаёт таблицу, `V2` добавляет тестовые данные.
+- `docker-compose.yml`: PostgreSQL.
 
 ## Ветки
 
