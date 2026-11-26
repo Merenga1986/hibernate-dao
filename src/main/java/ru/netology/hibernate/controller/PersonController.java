@@ -79,7 +79,7 @@ public class PersonController {
         return ResponseEntity.noContent().build();
     }
 
-    // ---------- запросы @Query (JPQL) ----------
+    // ---------- запросы @Query (нативный SQL) ----------
 
     /** GET /persons/by-city?city=Moscow */
     @GetMapping("/by-city")
